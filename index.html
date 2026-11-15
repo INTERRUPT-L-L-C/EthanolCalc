@@ -1479,8 +1479,8 @@ const BlendCore = (() => {
         "stroke-width": w, "stroke-linecap": "round",
         opacity: kind === "half" ? 0.75 : 1
       }, ticks);
-      if (kind !== "half") {
-        const rNum = kind === "major" ? 139 : 144;
+      if (kind === "major") { // only majors carry labels — intermediate division numerals removed per user (avoid confusion); all tick lines stay
+        const rNum = 139;
         const [tx, ty] = pt(rNum, deg);
         const t = mk("text", {
           x: tx, y: ty,
@@ -1489,7 +1489,7 @@ const BlendCore = (() => {
           "font-weight": kind === "major" ? 800 : 600,
           class: kind === "major" ? "dial-num" : "dial-num-minor"
         }, ticks);
-        t.textContent = kind === "major" ? MAJOR_LABELS[mark.value] : String(mark.value);
+        t.textContent = MAJOR_LABELS[mark.value];
       }
     }
 
