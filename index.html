@@ -748,8 +748,8 @@
         <!-- LCD odometer-style readout — moved to the footer zone per the user's
              reference: centered exactly on the removed E92 caption's bbox center
              (339.5 + 8.75/2 = 343.875); box h48 → y 319.875. Width 168 (x126–294)
-             clears the two-digit rim numeral 20 (bbox left 295.32) with positive
-             clearance on both sides; bottom corners at r = √(84² + 157.875²) ≈ 178.8
+             clears the rim majors E (right 119.22) and F (left 301.03) with ~7 units
+             clearance each side; bottom corners at r = √(84² + 157.875²) ≈ 178.8
              < face r187. Line offsets (+22/+39) preserved. -->
         <rect x="126" y="319.875" width="168" height="48" rx="7" fill="#04060a" stroke="#1d2530"/>
         <text id="lcdMain" class="lcd-main" x="210" y="341.875" text-anchor="middle" font-size="16" font-weight="700">—</text>
@@ -964,7 +964,7 @@ units: 1 US gal = 3.785411784 L (exact) · validity tolerance 1e-7 · gauge 0–
 </main>
 
 <footer class="site">
-  <b>ETHANOL BLEND CALCULATOR v2.0</b> · dial reference: BMW E92 335is · 20 divisions, majors 0/5/10/15/20 · 0.5-step · single-file, offline-capable
+  <b>ETHANOL BLEND CALCULATOR v2.0</b> · dial reference: BMW E92 335is · 20 divisions, majors E/¼/½/¾/F · 0.5-step · single-file, offline-capable
 </footer>
 
 <script>
@@ -1219,7 +1219,7 @@ const BlendCore = (() => {
     add("Golden 7 · inverted fuel model rejected", () => {
       expectState("InvalidFuelModel", () => calculateFlatFill(Object.assign({}, M, { baseE: 0.85, highE: 0.10 }), 0.30, 0.10));
     });
-    add("Gauge · 41 marks, majors 0/5/10/15/20", () => {
+    add("Gauge · 41 marks, majors 0/5/10/15/20 (labeled E/¼/½/¾/F)", () => {
       const marks = gaugeMarks();
       assert(marks.length === 41, "mark count " + marks.length);
       const majors = marks.filter((x) => x.major).map((x) => x.value);
@@ -1445,6 +1445,9 @@ const BlendCore = (() => {
   /* ---------- dial geometry ---------- */
   const CX = 210, CY = 210;
   const START_DEG = 225, SWEEP_DEG = 270; // 0 at 7:30 (lower-left), 20 at 4:30 (lower-right), clockwise over the top
+  /* Major labels speak gauge language (user decision: variant A); the underlying
+     values stay 0/5/10/15/20 — minor ticks keep division numerals, inner ring keeps %. */
+  const MAJOR_LABELS = { 0: "E", 5: "¼", 10: "½", 15: "¾", 20: "F" };
   const degFor = (v) => START_DEG + (v / 20) * SWEEP_DEG;
   const pt = (r, deg) => {
     const rad = (deg * Math.PI) / 180;
@@ -1486,7 +1489,7 @@ const BlendCore = (() => {
           "font-weight": kind === "major" ? 800 : 600,
           class: kind === "major" ? "dial-num" : "dial-num-minor"
         }, ticks);
-        t.textContent = String(mark.value);
+        t.textContent = kind === "major" ? MAJOR_LABELS[mark.value] : String(mark.value);
       }
     }
 
