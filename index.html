@@ -734,6 +734,7 @@
 
         <!-- dial captions -->
         <text class="dial-caption" x="210" y="122" text-anchor="middle" font-size="11">FUEL LEVEL</text>
+        <text class="dial-sub" x="210" y="137" text-anchor="middle" font-size="8">20 DIVISIONS · 0.5 STEP</text>
 
         <!-- fuel pump icon + FUEL -->
         <g id="pumpIcon" transform="translate(186,242)" fill="none" stroke="#cfd5dc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -744,18 +745,15 @@
         </g>
         <text class="dial-caption" x="216" y="256" text-anchor="middle" font-size="10">FUEL</text>
 
-        <!-- LCD odometer-style readout — centered between the FUEL LEVEL caption
-             (bbox bottom 124.5) and the hub circle's top edge (210 − 23 − 0.75 stroke
-             = 186.25): midpoint 155.375, box h48 → y 131.375. Line offsets (+22/+39)
-             preserved from the original box. -->
-        <rect x="124" y="131.375" width="172" height="48" rx="7" fill="#04060a" stroke="#1d2530"/>
-        <text id="lcdMain" class="lcd-main" x="210" y="153.375" text-anchor="middle" font-size="16" font-weight="700">—</text>
-        <text id="lcdSub" class="lcd-sub" x="210" y="170.375" text-anchor="middle" font-size="9.5">—</text>
-
-        <text class="dial-sub" x="210" y="347" text-anchor="middle" font-size="7.5" opacity="0.8">E92 · 335is CLUSTER REFERENCE</text>
-        <!-- divisions caption: same 15-unit baseline rhythm below the E92 reference
-             as it originally had below FUEL LEVEL (122 → 137); 347 + 15 = 362 -->
-        <text class="dial-sub" x="210" y="362" text-anchor="middle" font-size="8">20 DIVISIONS · 0.5 STEP</text>
+        <!-- LCD odometer-style readout — moved to the footer zone per the user's
+             reference: centered exactly on the removed E92 caption's bbox center
+             (339.5 + 8.75/2 = 343.875); box h48 → y 319.875. Width 168 (x126–294)
+             clears the two-digit rim numeral 20 (bbox left 295.32) with positive
+             clearance on both sides; bottom corners at r = √(84² + 157.875²) ≈ 178.8
+             < face r187. Line offsets (+22/+39) preserved. -->
+        <rect x="126" y="319.875" width="168" height="48" rx="7" fill="#04060a" stroke="#1d2530"/>
+        <text id="lcdMain" class="lcd-main" x="210" y="341.875" text-anchor="middle" font-size="16" font-weight="700">—</text>
+        <text id="lcdSub" class="lcd-sub" x="210" y="358.875" text-anchor="middle" font-size="9.5">—</text>
 
         <!-- needle -->
         <g id="needle" filter="url(#needleGlow)">
