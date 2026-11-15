@@ -6,7 +6,8 @@ A scientific fuel-blend instrument with a BMW E92 335is-style analog cluster dia
 
 ## What it does
 
-- Computes exact volumes of high-ethanol fuel (e.g. E85) and base petrol needed to reach a target ethanol %, from the fuel currently in the tank (top-up mode) or for a full tank.
+- Computes exact volumes of high-ethanol fuel (e.g. E85) and base petrol needed to reach a target ethanol %, from the fuel currently in the tank to a chosen **fill-to** volume — Full · ¾ · ½ · ¼ · Custom (default Full tank).
+- Optional **fill cost**: enter base and high-fuel prices (any currency) to see what the fill costs — you pay only for what you add.
 - Estimates AKI and RON from configurable fuel anchors (linear model — estimates, not lab measurements).
 - Works with **any petrol tank capacity**, in US gallons or liters (1 US gal = 3.785411784 L, exact).
 - Target-ethanol table with CSV export.
@@ -23,8 +24,8 @@ The dial emulates the E92 instrument cluster: chrome bezel, black face, white ne
 ## Accuracy
 
 - Pure calculation core, independent of the UI, implementing the volume-balance equations with a 1e-7 validity tolerance.
-- A **14-check calibration self-test runs on every page load** (golden examples, error states, unit round-trips, gauge geometry, and a 126-case mass-balance/feasibility property sweep). If any check fails, results are disabled and a CAL fault is shown.
-- Impossible blends are rejected with explicit physical error states (target out of fuel range, tank full, current fuel already above target) instead of returning nonsense numbers.
+- A **21-check calibration self-test runs on every page load** (golden examples, error states, unit round-trips, gauge geometry, fill-to/cost cases, and a 126-case mass-balance/feasibility property sweep). If any check fails, results are disabled and a CAL fault is shown.
+- Impossible blends are rejected with explicit physical error states that report the reachable ethanol bound (target out of range, tank full, fill-to below current fuel, current fuel already too strong) instead of returning nonsense numbers.
 
 ## Usage notes
 
