@@ -412,6 +412,9 @@
   .cost-details summary::after { content: "+"; font-family: var(--font-mono); color: var(--amber-hi); font-size: 1rem; line-height: 1; }
   .cost-details[open] summary::after { content: "–"; }
   .cost-details summary:hover { color: var(--ink); }
+  .fm-hint { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-family: var(--font-mono); font-size: .66rem; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-faint); }
+  @media (max-width: 350px) { .fm-hint { display: none; } }
   .cost-body { padding: 2px 13px 13px; display: grid; gap: 12px; }
   .cost-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .cost-note { font-size: .72rem; color: var(--ink-faint); line-height: 1.4; margin: 0; }
@@ -816,29 +819,34 @@
       </div>
       <p class="hint">Any petrol tank capacity. <b>16.1 gal (61 L)</b> is the E92 example — edit for your car. No hidden vehicle default.</p>
 
-      <h3>FUEL MODEL</h3>
-      <div class="field-grid">
-        <div>
-          <label for="baseE">Base fuel ethanol %</label>
-          <input id="baseE" type="number" inputmode="decimal" step="0.5" min="0" max="100" value="10" />
+      <details id="fuelModelDetails" class="cost-details">
+        <summary><span>Fuel model · advanced</span><span id="fuelModelHint" class="fm-hint">E10/93 → E85/110 · RON +5.3</span></summary>
+        <div class="cost-body">
+          <div class="field-grid">
+            <div>
+              <label for="baseE">Base fuel ethanol %</label>
+              <input id="baseE" type="number" inputmode="decimal" step="0.5" min="0" max="100" value="10" />
+            </div>
+            <div>
+              <label for="baseAki">Base fuel AKI</label>
+              <input id="baseAki" type="number" inputmode="decimal" step="0.5" value="93" />
+            </div>
+            <div>
+              <label for="highE">High fuel ethanol %</label>
+              <input id="highE" type="number" inputmode="decimal" step="0.5" min="0" max="100" value="85" />
+            </div>
+            <div>
+              <label for="highAki">High fuel AKI</label>
+              <input id="highAki" type="number" inputmode="decimal" step="0.5" value="110" />
+            </div>
+            <div class="wide">
+              <label for="ronOffset">RON estimate offset (RON = AKI + offset)</label>
+              <input id="ronOffset" type="number" inputmode="decimal" step="0.1" value="5.3" />
+            </div>
+          </div>
+          <p class="cost-note">The two fuels you blend. Defaults are typical US pump E10 (AKI 93) and E85 (AKI 110) — only edit if your fuels differ. RON is estimated as AKI + offset.</p>
         </div>
-        <div>
-          <label for="baseAki">Base fuel AKI</label>
-          <input id="baseAki" type="number" inputmode="decimal" step="0.5" value="93" />
-        </div>
-        <div>
-          <label for="highE">High fuel ethanol %</label>
-          <input id="highE" type="number" inputmode="decimal" step="0.5" min="0" max="100" value="85" />
-        </div>
-        <div>
-          <label for="highAki">High fuel AKI</label>
-          <input id="highAki" type="number" inputmode="decimal" step="0.5" value="110" />
-        </div>
-        <div class="wide">
-          <label for="ronOffset">RON estimate offset (RON = AKI + offset)</label>
-          <input id="ronOffset" type="number" inputmode="decimal" step="0.1" value="5.3" />
-        </div>
-      </div>
+      </details>
     </section>
 
     <section class="panel" aria-label="Blend target and result">
@@ -1581,6 +1589,9 @@ const BlendCore = (() => {
     $("priceHighUnit").textContent = u;
     $("baseFuelName").textContent = "E" + trimNum(readNum("baseE"), 1);
     $("highFuelName").textContent = "E" + trimNum(readNum("highE"), 1);
+    $("fuelModelHint").textContent = "E" + trimNum(readNum("baseE"), 1) + "/" + trimNum(readNum("baseAki"), 1)
+      + " → E" + trimNum(readNum("highE"), 1) + "/" + trimNum(readNum("highAki"), 1)
+      + " · RON +" + trimNum(readNum("ronOffset"), 1);
 
     /* fill-to readout + gauge target marker */
     syncFillToUI();
@@ -1979,6 +1990,7 @@ const BlendCore = (() => {
       syncUnitButtons();
       applyLevel({ instant: true });
       syncFillToUI();
+      update();
       calculateTable();
       saveState();
     });
