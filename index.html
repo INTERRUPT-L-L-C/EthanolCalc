@@ -374,6 +374,42 @@
     color: #140b02;
     box-shadow: 0 0 14px rgba(255,154,60,.3);
   }
+  /* fill-to preset chips (distinct from level .chip so bindings stay separate) */
+  .fchip {
+    appearance: none; border: 1px solid #2c3542; background: #0c1016; color: var(--ink-dim);
+    font-family: var(--font-display); font-weight: 700; font-size: .82rem; letter-spacing: .06em;
+    border-radius: 99px; min-width: 48px; min-height: 40px; padding: 6px 14px; cursor: pointer;
+    transition: all .15s; touch-action: manipulation;
+  }
+  .fchip:hover { border-color: var(--amber-dim); color: var(--ink); }
+  .fchip.active {
+    background: linear-gradient(180deg, #ffab55, #f08a26); border-color: #ffab55; color: #140b02;
+    box-shadow: 0 0 14px rgba(255,154,60,.3);
+  }
+  .fillto-block { margin-top: 14px; padding-top: 12px; border-top: 1px solid #161d27; }
+  .fillto-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .fillto-label { font-family: var(--font-display); font-size: .68rem; font-weight: 700; letter-spacing: .16em; color: var(--ink-dim); text-transform: uppercase; }
+  .fillto-readout { font-family: var(--font-mono); font-size: .8rem; color: var(--amber-hi); font-weight: 700; }
+  .fillto-block .quick-row { margin-top: 8px; }
+  .fill-custom { margin-top: 10px; }
+  /* optional cost disclosure */
+  .cost-details { margin-top: 14px; border: 1px solid #1c2530; border-radius: 10px; background: #0a0e13; }
+  .cost-details summary {
+    cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 11px 13px; font-family: var(--font-display); font-size: .7rem; font-weight: 700; letter-spacing: .14em;
+    color: var(--ink-dim); text-transform: uppercase; user-select: none; touch-action: manipulation;
+  }
+  .cost-details summary::-webkit-details-marker { display: none; }
+  .cost-details summary::after { content: "+"; font-family: var(--font-mono); color: var(--amber-hi); font-size: 1rem; line-height: 1; }
+  .cost-details[open] summary::after { content: "–"; }
+  .cost-details summary:hover { color: var(--ink); }
+  .cost-body { padding: 2px 13px 13px; display: grid; gap: 12px; }
+  .cost-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .cost-note { font-size: .72rem; color: var(--ink-faint); line-height: 1.4; margin: 0; }
+  .result-line .v.cost { color: var(--green); text-shadow: 0 0 10px rgba(53,199,89,.25); }
+  .result-total { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #161d27; }
+  .result-total .k { color: var(--ink-dim); font-family: var(--font-display); letter-spacing: .08em; font-size: .78rem; font-weight: 700; }
+  .result-total .v { font-family: var(--font-mono); color: var(--green); font-weight: 800; font-size: 1.05rem; text-shadow: 0 0 12px rgba(53,199,89,.3); white-space: nowrap; }
   .level-readout {
     margin-left: auto;
     font-family: var(--font-mono);
@@ -602,6 +638,7 @@
   }
   @media (max-width: 350px) {
     .field-grid { grid-template-columns: 1fr; }
+    .cost-grid { grid-template-columns: 1fr; }
     .readout-row { grid-template-columns: 1fr; }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -628,10 +665,6 @@
   <section class="panel cluster-panel" aria-label="Fuel level cluster">
     <div class="cluster-head">
       <span class="cluster-title">FUEL LEVEL · TANK SELECTOR</span>
-      <div class="seg" role="group" aria-label="Blend mode">
-        <button type="button" id="modeTopup" aria-pressed="true">TOP-UP</button>
-        <button type="button" id="modeFlat" aria-pressed="false">FULL TANK</button>
-      </div>
     </div>
 
     <div class="dial-wrap">
@@ -684,6 +717,11 @@
         <!-- ticks + numerals (built by JS) -->
         <g id="ticks"></g>
         <g id="innerScale"></g>
+
+        <!-- fill-to target marker (shown when fill-to is below full) -->
+        <g id="fillMarker" opacity="0" aria-hidden="true">
+          <path d="M 210 30 L 204 14 L 216 14 Z" fill="#4dd7ff"/>
+        </g>
 
         <!-- dial captions -->
         <text class="dial-caption" x="210" y="122" text-anchor="middle" font-size="11">FUEL LEVEL</text>
@@ -805,6 +843,45 @@
           <input id="targetFillE" type="number" inputmode="decimal" step="0.5" min="0" max="100" value="30" />
         </div>
       </div>
+
+      <div class="fillto-block">
+        <div class="fillto-head">
+          <span class="fillto-label">Fill to</span>
+          <span id="fillToReadout" class="fillto-readout">Full tank</span>
+        </div>
+        <div class="quick-row" role="group" aria-label="Fill-to level presets">
+          <button type="button" class="fchip" data-fill="full" aria-pressed="true">Full</button>
+          <button type="button" class="fchip" data-fill="threeq" aria-pressed="false">¾</button>
+          <button type="button" class="fchip" data-fill="half" aria-pressed="false">½</button>
+          <button type="button" class="fchip" data-fill="quarter" aria-pressed="false">¼</button>
+          <button type="button" class="fchip" data-fill="custom" aria-pressed="false">Custom</button>
+        </div>
+        <div id="fillCustomWrap" class="fill-custom" hidden>
+          <label for="fillCustom">Custom fill-to volume (<span id="fillCustomUnit">gal</span>)</label>
+          <input id="fillCustom" type="number" inputmode="decimal" min="0" step="0.1" value="16.1" />
+        </div>
+      </div>
+
+      <details id="costDetails" class="cost-details">
+        <summary>Add prices · fill cost</summary>
+        <div class="cost-body">
+          <div class="cost-grid">
+            <div>
+              <label for="priceBase"><span id="baseFuelName">E10</span> price / <span id="priceBaseUnit">gal</span></label>
+              <input id="priceBase" type="number" inputmode="decimal" min="0" step="0.01" placeholder="e.g. 3.49" />
+            </div>
+            <div>
+              <label for="priceHigh"><span id="highFuelName">E85</span> price / <span id="priceHighUnit">gal</span></label>
+              <input id="priceHigh" type="number" inputmode="decimal" min="0" step="0.01" placeholder="e.g. 4.59" />
+            </div>
+          </div>
+          <div>
+            <label for="currencySym">Currency symbol</label>
+            <input id="currencySym" type="text" maxlength="3" value="$" style="max-width:90px" />
+          </div>
+          <p class="cost-note">Optional — you only pay for the fuel you add. Leave blank to hide cost. Prices follow the gal/L unit toggle.</p>
+        </div>
+      </details>
 
       <div id="fillResult" class="result-card" aria-live="polite"></div>
       <div id="fillNote"></div>
@@ -962,43 +1039,69 @@ const BlendCore = (() => {
     };
   }
 
-  /* Top-up: fuel already in the tank, fill the remaining room to target. */
-  function calculateTargetFill(m, currentGallons, currentE, targetE) {
+  /* Top-up / partial-fill: keep `currentGallons` at `currentE`, add high+base
+     fuel to reach `targetE` at a chosen FINAL volume `finalGallons`.
+     finalGallons defaults to the whole tank (the classic "fill to full" case),
+     so every pre-existing 4-argument call is byte-for-byte unchanged. A smaller
+     finalGallons solves "fill to half / three-quarters / custom" with the exact
+     same volume + ethanol balance — no separate physics. */
+  function calculateTargetFill(m, currentGallons, currentE, targetE, finalGallons) {
     validateModel(m);
     checkTargetRange(targetE, m);
     checkCurrentE(currentE);
+    const V = (finalGallons === undefined || finalGallons === null) ? m.tankSize : finalGallons;
+    if (!finite(V) || V <= 0) throw err("InvalidFillVolume", "Fill-to volume must be a number greater than zero.");
+    if (V > m.tankSize + TOL) throw err("FillAboveTank", "Fill-to volume is larger than the tank capacity.");
     if (!finite(currentGallons) || currentGallons < -TOL || currentGallons > m.tankSize + TOL) {
       throw err("InvalidFuelLevel", "Current fuel amount must be between empty and full.");
     }
     const current = Math.min(Math.max(0, currentGallons), m.tankSize);
-    const available = m.tankSize - current;
+    if (current > V + TOL) {
+      throw err("FillBelowCurrent", "Fill-to level is below the fuel already in the tank — adding fuel can't remove it. Lower the current level or raise the fill-to target.");
+    }
+    const available = V - current;
     if (available <= TOL) {
-      throw err("TankFull", "The tank is full. There is no room to add fuel.");
+      throw err("TankFull", "There is no room to add fuel at this fill-to level.");
     }
     const currentEthanolGallons = current * currentE;
-    const neededAddedEthanolGallons = m.tankSize * targetE - currentEthanolGallons;
+    const neededAddedEthanolGallons = V * targetE - currentEthanolGallons;
     const highGallonsToAdd = (neededAddedEthanolGallons - available * m.baseE) / (m.highE - m.baseE);
     const baseGallonsToAdd = available - highGallonsToAdd;
     if (highGallonsToAdd < -TOL) {
-      throw err("CurrentFuelAlreadyAboveTarget", "The fuel already in the tank has too much ethanol for that target.");
+      const minReach = (currentEthanolGallons + available * m.baseE) / V * 100;
+      throw err("CurrentFuelAlreadyAboveTarget", "The fuel in the tank is already too strong for E" + trimPct(targetE * 100) + ". Even topping up with E" + trimPct(m.baseE * 100) + ", the lowest reachable at this fill-to level is E" + trimPct(minReach) + ". Raise the target, or fill to a higher level.");
     }
     if (baseGallonsToAdd < -TOL) {
-      throw err("TargetAbovePossibleRange", "There is not enough tank room to reach that target with the configured fuels.");
+      const maxReach = (currentEthanolGallons + available * m.highE) / V * 100;
+      throw err("TargetAbovePossibleRange", "Not enough room to reach E" + trimPct(targetE * 100) + " at this fill-to level — the strongest you can get is E" + trimPct(maxReach) + ". Fill to a higher level, or lower the target.");
     }
     const hi = Math.max(0, highGallonsToAdd);
     const ba = Math.max(0, baseGallonsToAdd);
-    const finalEthanolPercent = (currentEthanolGallons + hi * m.highE + ba * m.baseE) / m.tankSize * 100;
+    const finalEthanolPercent = (currentEthanolGallons + hi * m.highE + ba * m.baseE) / V * 100;
     const cur = estimateAkiForE(currentE, m);
     const currentAki = current > TOL ? cur.aki : 0;
-    const finalAki = (current * currentAki + hi * m.highAki + ba * m.baseAki) / m.tankSize;
+    const finalAki = (current * currentAki + hi * m.highAki + ba * m.baseAki) / V;
     return {
       state: "ok", mode: "topup",
       ethanolPercent: finalEthanolPercent,
       highGallons: hi, baseGallons: ba,
       aki: finalAki, ron: finalAki + m.ronOffset,
       extrapolated: current > TOL && cur.extrapolated,
-      currentGallons: current, availableGallons: available
+      currentGallons: current, availableGallons: available, finalGallons: V
     };
+  }
+
+  /* Cost of the fill. Volumes and prices must share the SAME unit (both per-gal
+     or both per-liter). You only pay for what you add. Returns null when no
+     price is set; `total` stays null until both prices are present. */
+  function blendCost(highVol, baseVol, priceHigh, priceBase) {
+    const h = finite(priceHigh) && priceHigh >= 0;
+    const b = finite(priceBase) && priceBase >= 0;
+    if (!h && !b) return null;
+    const highCost = h ? highVol * priceHigh : null;
+    const baseCost = b ? baseVol * priceBase : null;
+    const total = (h && b) ? highCost + baseCost : null;
+    return { highCost, baseCost, total };
   }
 
   function blendForTarget(targetPercent, m) {
@@ -1154,6 +1257,45 @@ const BlendCore = (() => {
       }
       assert(n === 126, "case count " + n);
     });
+    add("Fill-to · default equals legacy full-tank top-up", () => {
+      const a = calculateTargetFill(M, 6.0, 0.10, 0.30);
+      const b = calculateTargetFill(M, 6.0, 0.10, 0.30, M.tankSize);
+      assert(approx(a.highGallons, b.highGallons, 1e-12) && approx(a.baseGallons, b.baseGallons, 1e-12), "volumes match");
+      assert(approx(a.ethanolPercent, b.ethanolPercent, 1e-12) && approx(a.aki, b.aki, 1e-12), "E/AKI match");
+      assert(approx(b.finalGallons, 16.1, 1e-12), "finalGallons = tank");
+    });
+    add("Fill-to · half-tank partial fill (¼→½, E10→E30)", () => {
+      const r = calculateTargetFill(M, 4.025, 0.10, 0.30, 8.05);
+      assert(approx(r.finalGallons, 8.05, 1e-9), "final volume");
+      assert(approx(r.availableGallons, 4.025, 1e-9), "added volume");
+      assert(approx(r.highGallons, 2.1466666667, 1e-6), "high " + r.highGallons);
+      assert(approx(r.baseGallons, 1.8783333333, 1e-6), "base " + r.baseGallons);
+      assert(approx(r.ethanolPercent, 30, 1e-6), "final E " + r.ethanolPercent);
+      assert(approx(r.currentGallons + r.highGallons + r.baseGallons, 8.05, 1e-6), "volume conservation to fill-to");
+    });
+    add("Fill-to · below current fuel rejected", () => {
+      expectState("FillBelowCurrent", () => calculateTargetFill(M, 12.0, 0.10, 0.30, 8.05));
+    });
+    add("Fill-to · above tank capacity rejected", () => {
+      expectState("FillAboveTank", () => calculateTargetFill(M, 4.0, 0.10, 0.30, 20.0));
+    });
+    add("Fill-to · dilution down to a lower target", () => {
+      const r = calculateTargetFill(M, 4.025, 0.60, 0.40, 16.1);
+      assert(approx(r.ethanolPercent, 40, 1e-6), "final E " + r.ethanolPercent);
+      assert(r.highGallons >= 0 && r.baseGallons >= 0, "non-negative volumes");
+      assert(approx(r.currentGallons + r.highGallons + r.baseGallons, 16.1, 1e-6), "volume conservation");
+    });
+    add("Cost · two prices, total = sum of parts", () => {
+      const c = blendCost(4.2933333333, 3.7566666667, 4.59, 3.49);
+      assert(approx(c.highCost, 19.7064, 1e-3), "high cost " + c.highCost);
+      assert(approx(c.baseCost, 13.1107666667, 1e-3), "base cost " + c.baseCost);
+      assert(approx(c.total, c.highCost + c.baseCost, 1e-9), "total");
+    });
+    add("Cost · no prices → null; one price → no total", () => {
+      assert(blendCost(2, 3, null, null) === null, "no prices");
+      const one = blendCost(2, 3, 4.0, null);
+      assert(one.total === null && approx(one.highCost, 8, 1e-9), "single price");
+    });
 
     const passed = checks.filter((c) => c.pass).length;
     return { total: checks.length, passed, checks, ok: passed === checks.length };
@@ -1161,7 +1303,7 @@ const BlendCore = (() => {
 
   return Object.freeze({
     TOL, L_PER_US_GAL, GAUGE, MAX_TABLE_ROWS,
-    validateModel, calculateFlatFill, calculateTargetFill, blendForTarget,
+    validateModel, calculateFlatFill, calculateTargetFill, blendForTarget, blendCost,
     estimateAkiForE, gaugeMarks, tableTargets, galToL, lToGal, selfTest
   });
 })();
@@ -1173,8 +1315,10 @@ const BlendCore = (() => {
   const CORE = BlendCore;
   const STORE_KEY = "ethanolcalc.cluster.v2";
   const DEFAULTS = Object.freeze({
-    unit: "gal", tank: 16.1, level: 10, mode: "topup",
+    unit: "gal", tank: 16.1, level: 10,
     currentE: 10, targetE: 30,
+    fillPreset: "full", fillCustom: 16.1,
+    priceBase: null, priceHigh: null, currency: "$",
     baseE: 10, baseAki: 93, highE: 85, highAki: 110, ronOffset: 5.3,
     startE: 20, endE: 40, stepE: 1
   });
@@ -1193,14 +1337,17 @@ const BlendCore = (() => {
       if (!raw) return;
       const saved = JSON.parse(raw);
       for (const k of Object.keys(DEFAULTS)) {
-        if (k === "unit" || k === "mode") {
+        if (k === "unit" || k === "fillPreset" || k === "currency") {
           if (typeof saved[k] === "string") state[k] = saved[k];
+        } else if (k === "priceBase" || k === "priceHigh") {
+          if (saved[k] === null || (typeof saved[k] === "number" && Number.isFinite(saved[k]) && saved[k] >= 0)) state[k] = saved[k];
         } else if (typeof saved[k] === "number" && Number.isFinite(saved[k])) {
           state[k] = saved[k];
         }
       }
       if (state.unit !== "gal" && state.unit !== "L") state.unit = "gal";
-      if (state.mode !== "topup" && state.mode !== "flat") state.mode = "topup";
+      if (!FILL_PRESETS[state.fillPreset] && state.fillPreset !== "custom") state.fillPreset = "full";
+      if (typeof state.currency !== "string" || state.currency === "") state.currency = "$";
       state.level = clampLevel(state.level);
     } catch (e) { /* private mode / corrupt storage → defaults */ }
   }
@@ -1225,6 +1372,41 @@ const BlendCore = (() => {
   const tankGal = () => (state.unit === "gal" ? state.tank : CORE.lToGal(state.tank));
 
   function readNum(id) { return Number($(id).value); }
+
+  /* ---------- fill-to + cost helpers ---------- */
+  const FILL_PRESETS = {
+    full: { f: 1, label: "Full tank" },
+    threeq: { f: 0.75, label: "¾ tank" },
+    half: { f: 0.5, label: "½ tank" },
+    quarter: { f: 0.25, label: "¼ tank" }
+  };
+  function fillToGal() {
+    const tank = tankGal();
+    if (state.fillPreset === "custom") {
+      return state.unit === "gal" ? state.fillCustom : CORE.lToGal(state.fillCustom);
+    }
+    const p = FILL_PRESETS[state.fillPreset];
+    return tank * (p ? p.f : 1);
+  }
+  function readPrice(id) {
+    const raw = $(id).value.trim();
+    if (raw === "") return null;
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  }
+  /* Prices are stored canonically per US gallon; only the display converts. */
+  function priceToDisplay(p) { return p === null ? null : (state.unit === "gal" ? p : p / CORE.L_PER_US_GAL); }
+  function priceFromDisplay(v) { return state.unit === "gal" ? v : v * CORE.L_PER_US_GAL; }
+  function fmtMoney(n) { return (state.currency || "$") + n.toFixed(2); }
+  function syncFillToUI() {
+    document.querySelectorAll(".fchip").forEach((c) => {
+      const on = c.dataset.fill === state.fillPreset;
+      c.classList.toggle("active", on);
+      c.setAttribute("aria-pressed", String(on));
+    });
+    $("fillCustomWrap").hidden = state.fillPreset !== "custom";
+    $("fillCustom").value = String(state.fillCustom);
+  }
 
   function getModel() {
     return {
@@ -1345,9 +1527,13 @@ const BlendCore = (() => {
     if (unit === state.unit) return;
     // convert the entered capacity so the physical tank stays the same
     const gal = tankGal();
-    state.unit = unit;
+    // convert the custom fill-to volume and any prices so physical quantities stay the same
+    const convVol = (v) => (unit === "gal" ? CORE.lToGal(v) : CORE.galToL(v));
+    state.fillCustom = Number(convVol(state.fillCustom).toFixed(3));
+    state.unit = unit; /* prices stay canonical per-gallon; syncInputsFromState re-displays them */
     state.tank = Number((unit === "gal" ? gal : CORE.galToL(gal)).toFixed(3));
     $("tankSize").value = String(state.tank);
+    syncInputsFromState();
     syncUnitButtons();
     update();
     if (tableRows) calculateTable();
@@ -1359,25 +1545,6 @@ const BlendCore = (() => {
     $("unitL").setAttribute("aria-pressed", String(state.unit === "L"));
     const lamp = $("lampUnit");
     lamp.textContent = state.unit === "gal" ? "US GAL" : "LITERS";
-  }
-
-  function setMode(mode) {
-    state.mode = mode;
-    $("modeTopup").setAttribute("aria-pressed", String(mode === "topup"));
-    $("modeFlat").setAttribute("aria-pressed", String(mode === "flat"));
-    const inactive = mode === "flat";
-    $("dial").classList.toggle("inactive", inactive);
-    $("dial").setAttribute("aria-disabled", String(inactive));
-    $("levelSlider").disabled = inactive;
-    $("stepDown").disabled = inactive;
-    $("stepUp").disabled = inactive;
-    document.querySelectorAll(".chip").forEach((c) => { c.disabled = inactive; });
-    $("currentELabel").textContent = inactive ? "Starting fuel ethanol %" : "Current tank ethanol %";
-    $("dialStatus").textContent = inactive
-      ? "Full-tank blend: the whole tank is filled from the starting fuel model — gauge level is not used."
-      : "Drag the dial, use the slider, or tap ±0.5. Each division = 1/20 of the tank (5%).";
-    update();
-    saveState();
   }
 
   /* ---------- lamps ---------- */
@@ -1392,20 +1559,42 @@ const BlendCore = (() => {
 
   /* ---------- main update ---------- */
   function update() {
-    const topup = state.mode === "topup";
     const tank = tankGal();
     const tankValid = Number.isFinite(tank) && tank > 0;
+    const fillGal = fillToGal();
+    const fillValid = Number.isFinite(fillGal) && fillGal > 0;
+    const u = unitLabel();
+
+    /* unit + fuel labels on the optional inputs */
+    $("fillCustomUnit").textContent = u;
+    $("priceBaseUnit").textContent = u;
+    $("priceHighUnit").textContent = u;
+    $("baseFuelName").textContent = "E" + trimNum(readNum("baseE"), 1);
+    $("highFuelName").textContent = "E" + trimNum(readNum("highE"), 1);
+
+    /* fill-to readout + gauge target marker */
+    syncFillToUI();
+    if (tankValid && fillValid) {
+      const presetLabel = state.fillPreset === "custom" ? "Custom" : (FILL_PRESETS[state.fillPreset] || FILL_PRESETS.full).label;
+      $("fillToReadout").textContent = presetLabel + " · " + fmtVol(fillGal);
+      const fillLevel = Math.min(20, Math.max(0, fillGal / tank * 20));
+      const marker = $("fillMarker");
+      marker.setAttribute("transform", "rotate(" + degFor(fillLevel) + " " + CX + " " + CY + ")");
+      marker.setAttribute("opacity", state.fillPreset === "full" ? "0" : "0.9");
+    } else {
+      $("fillToReadout").textContent = "—";
+      $("fillMarker").setAttribute("opacity", "0");
+    }
 
     /* volume readouts */
     if (tankValid) {
-      const cur = topup ? tank * state.level / 20 : tank;
-      const avail = topup ? tank - cur : 0;
+      const cur = tank * state.level / 20;
+      const room = fillValid ? Math.max(0, fillGal - cur) : tank - cur;
       $("currentVolReadout").textContent = fmtVol(cur);
-      $("availableVolReadout").textContent = topup ? fmtVol(avail) : "—";
-      $("lcdMain").textContent = toDisplayVol(cur).toFixed(volDecimals()) + " " + unitLabel().toUpperCase();
-      $("lcdSub").textContent = topup
-        ? fmtPct(state.level / 20 * 100) + "% · " + toDisplayVol(avail).toFixed(volDecimals()) + " FREE"
-        : "FULL TANK MODE";
+      $("availableVolReadout").textContent = fmtVol(room);
+      $("lcdMain").textContent = toDisplayVol(cur).toFixed(volDecimals()) + " " + u.toUpperCase();
+      $("lcdSub").textContent = fmtPct(state.level / 20 * 100) + "% · TO " +
+        (fillValid ? toDisplayVol(fillGal).toFixed(volDecimals()) : "—") + " " + u.toUpperCase();
       $("tankError").innerHTML = "";
     } else {
       $("currentVolReadout").textContent = "SET CAPACITY";
@@ -1418,7 +1607,7 @@ const BlendCore = (() => {
     }
 
     /* low-fuel lamp */
-    setLamp("warnLow", topup && tankValid && state.level <= 2.5);
+    setLamp("warnLow", tankValid && state.level <= 2.5);
 
     /* blend result */
     const errBox = $("fillError");
@@ -1445,17 +1634,15 @@ const BlendCore = (() => {
       const model = getModel();
       const targetE = readNum("targetFillE") / 100;
       const currentE = readNum("currentE") / 100;
-      const result = topup
-        ? CORE.calculateTargetFill(model, tank * state.level / 20, currentE, targetE)
-        : CORE.calculateFlatFill(model, targetE, currentE);
+      const result = CORE.calculateTargetFill(model, tank * state.level / 20, currentE, targetE, fillGal);
       lastResult = result;
       renderResult(result, model);
     } catch (e) {
       const stateCode = e.state || "Error";
       resBox.innerHTML = msgHtml("error", e.message, stateCode);
       if (stateCode === "CurrentFuelAlreadyAboveTarget" || stateCode === "InvalidCurrentE") setLamp("warnMix", true);
-      if (stateCode === "TargetAbovePossibleRange" || stateCode === "TargetBelowPossibleRange" || stateCode === "InvalidTarget") setLamp("warnRange", true);
-      if (stateCode === "TankFull") setLamp("warnFull", true);
+      if (stateCode === "TargetAbovePossibleRange" || stateCode === "TargetBelowPossibleRange" || stateCode === "InvalidTarget" || stateCode === "FillAboveTank" || stateCode === "InvalidFillVolume") setLamp("warnRange", true);
+      if (stateCode === "TankFull" || stateCode === "FillBelowCurrent") setLamp("warnFull", true);
       if (stateCode === "InvalidFuelModel" || stateCode === "MissingTankSize") setLamp("warnRange", true);
     }
   }
@@ -1465,13 +1652,31 @@ const BlendCore = (() => {
   function renderResult(r, model) {
     const highName = "E" + trimNum(model.highE * 100, 1);
     const baseName = "E" + trimNum(model.baseE * 100, 1);
-    const flat = r.mode === "flat";
+    const tank = tankGal();
+    const fillPct = tank > 0 ? r.finalGallons / tank * 100 : 0;
     const rows = [
-      [highName + " · high fuel " + (flat ? "for full tank" : "to add"), fmtVol(r.highGallons), true],
-      [baseName + " · base fuel " + (flat ? "for full tank" : "to add"), fmtVol(r.baseGallons), false],
+      ["Final volume", fmtVol(r.finalGallons) + " · " + fmtPct(fillPct) + "% of tank", false],
+      [highName + " · high fuel to add", fmtVol(r.highGallons), true],
+      [baseName + " · base fuel to add", fmtVol(r.baseGallons), false],
       ["AKI (estimated)", r.aki.toFixed(2), false],
       ["RON (AKI + " + trimNum(model.ronOffset, 1) + ")", r.ron.toFixed(1), false]
     ];
+    /* optional cost — canonical per-gallon prices × gallon volumes = exact, unit-independent */
+    const cost = CORE.blendCost(r.highGallons, r.baseGallons, state.priceHigh, state.priceBase);
+    let costHtml = "";
+    if (cost) {
+      const costRows = [];
+      if (cost.highCost !== null) costRows.push([highName + " cost", fmtMoney(cost.highCost)]);
+      if (cost.baseCost !== null) costRows.push([baseName + " cost", fmtMoney(cost.baseCost)]);
+      costHtml = costRows.map((row) =>
+        '<div class="result-line"><span class="k">' + row[0] + '</span><span class="v cost">' + row[1] + "</span></div>"
+      ).join("");
+      if (cost.total !== null) {
+        costHtml += '<div class="result-total"><span class="k">FILL COST</span><span class="v">' + fmtMoney(cost.total) + "</span></div>";
+      } else {
+        costHtml += '<div class="result-line"><span class="k">Add both prices for a total</span><span class="v cost">—</span></div>';
+      }
+    }
     $("fillResult").innerHTML =
       '<div class="result-hero"><span class="lbl">FINAL ETHANOL</span>' +
       '<span class="val">E' + fmtPct(r.ethanolPercent) + "</span></div>" +
@@ -1479,6 +1684,7 @@ const BlendCore = (() => {
       rows.map((row) =>
         '<div class="result-line"><span class="k">' + row[0] + '</span><span class="v' + (row[2] ? " hot" : "") + '">' + row[1] + "</span></div>"
       ).join("") +
+      costHtml +
       "</div>";
     if (r.extrapolated) {
       $("fillNote").innerHTML = msgHtml("warn",
@@ -1557,14 +1763,20 @@ const BlendCore = (() => {
     } else {
       const r = lastResult;
       const model = getModel();
-      text = [
-        "Ethanol blend — " + trimNum(state.tank, 3) + " " + unitLabel() + " tank" +
-          (state.mode === "topup" ? ", level " + state.level.toFixed(1) + "/20 (" + fmtPct(state.level / 20 * 100) + "%)" : ", full-tank mode"),
+      const fillGal = fillToGal();
+      const tank = tankGal();
+      const lines = [
+        "Ethanol blend — " + trimNum(state.tank, 3) + " " + unitLabel() + " tank, level " +
+          state.level.toFixed(1) + "/20 (" + fmtPct(state.level / 20 * 100) + "%)",
+        "Fill to: " + fmtVol(fillGal) + " (" + fmtPct(tank > 0 ? fillGal / tank * 100 : 0) + "% of tank)",
         "Current E" + trimNum(readNum("currentE"), 1) + " → target E" + trimNum(readNum("targetFillE"), 1),
         "Add E" + trimNum(model.highE * 100, 1) + ": " + fmtVol(r.highGallons),
         "Add E" + trimNum(model.baseE * 100, 1) + ": " + fmtVol(r.baseGallons),
         "Final: E" + fmtPct(r.ethanolPercent) + " · AKI " + r.aki.toFixed(2) + " · RON est " + r.ron.toFixed(1)
-      ].join("\n");
+      ];
+      const cost = CORE.blendCost(r.highGallons, r.baseGallons, state.priceHigh, state.priceBase);
+      if (cost && cost.total !== null) lines.push("Fill cost: " + fmtMoney(cost.total));
+      text = lines.join("\n");
     }
     const done = () => {
       btn.textContent = "COPIED ✓";
@@ -1605,7 +1817,6 @@ const BlendCore = (() => {
     let dragging = false;
 
     dial.addEventListener("pointerdown", (ev) => {
-      if (state.mode !== "topup") return;
       dragging = true;
       dial.classList.add("dragging");
       try { dial.setPointerCapture(ev.pointerId); } catch (e) { /* capture unsupported for this pointer */ }
@@ -1626,7 +1837,6 @@ const BlendCore = (() => {
     dial.addEventListener("pointercancel", end);
 
     dial.addEventListener("keydown", (ev) => {
-      if (state.mode !== "topup") return;
       const map = {
         ArrowRight: 0.5, ArrowUp: 0.5, ArrowLeft: -0.5, ArrowDown: -0.5,
         PageUp: 2.5, PageDown: -2.5
@@ -1667,6 +1877,11 @@ const BlendCore = (() => {
     $("startE").value = String(state.startE);
     $("endE").value = String(state.endE);
     $("stepE").value = String(state.stepE);
+    $("fillCustom").value = String(state.fillCustom);
+    const pb = priceToDisplay(state.priceBase), ph = priceToDisplay(state.priceHigh);
+    $("priceBase").value = pb === null ? "" : String(Number(pb.toFixed(4)));
+    $("priceHigh").value = ph === null ? "" : String(Number(ph.toFixed(4)));
+    $("currencySym").value = state.currency;
   }
 
   function bindInputs() {
@@ -1709,10 +1924,27 @@ const BlendCore = (() => {
       c.addEventListener("click", () => setLevel(Number(c.dataset.level)));
     });
 
+    document.querySelectorAll(".fchip").forEach((c) => {
+      c.addEventListener("click", () => {
+        const prevFill = fillToGal();
+        state.fillPreset = c.dataset.fill;
+        if (state.fillPreset === "custom") state.fillCustom = Number(toDisplayVol(prevFill).toFixed(volDecimals()));
+        syncFillToUI();
+        update();
+        saveState();
+      });
+    });
+    $("fillCustom").addEventListener("input", () => {
+      state.fillCustom = readNum("fillCustom");
+      update();
+      saveState();
+    });
+    $("priceBase").addEventListener("input", () => { const v = readPrice("priceBase"); state.priceBase = v === null ? null : priceFromDisplay(v); update(); saveState(); });
+    $("priceHigh").addEventListener("input", () => { const v = readPrice("priceHigh"); state.priceHigh = v === null ? null : priceFromDisplay(v); update(); saveState(); });
+    $("currencySym").addEventListener("input", () => { state.currency = $("currencySym").value.trim() || "$"; update(); saveState(); });
+
     $("unitGal").addEventListener("click", () => setUnit("gal"));
     $("unitL").addEventListener("click", () => setUnit("L"));
-    $("modeTopup").addEventListener("click", () => setMode("topup"));
-    $("modeFlat").addEventListener("click", () => setMode("flat"));
     $("calcTable").addEventListener("click", calculateTable);
     $("exportCsv").addEventListener("click", exportCsv);
     $("copyResult").addEventListener("click", copyResult);
@@ -1723,7 +1955,7 @@ const BlendCore = (() => {
       syncInputsFromState();
       syncUnitButtons();
       applyLevel({ instant: true });
-      setMode("topup");
+      syncFillToUI();
       calculateTable();
       saveState();
     });
@@ -1750,11 +1982,12 @@ const BlendCore = (() => {
   buildDial();
   syncInputsFromState();
   syncUnitButtons();
+  syncFillToUI();
+  $("dialStatus").textContent = "Drag the dial, use the slider, or tap ±0.5. Each division = 1/20 of the tank (5%).";
   runCalibration();
   bindDial();
   bindInputs();
   applyLevel({ instant: true });
-  setMode(state.mode);
   update();
   calculateTable();
 })();
