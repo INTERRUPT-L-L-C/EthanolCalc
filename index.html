@@ -235,12 +235,21 @@
     height: auto;
     display: block;
     touch-action: none;
+    /* Interactive region = the circular dial face only. The square SVG box's
+       corners must fall through to normal page scrolling on phones: the clip
+       and radius limit hit-testing to the circle, and insideDial() backs it up. */
+    border-radius: 50%;
+    clip-path: circle(49.05% at 50% 50%);
     cursor: grab;
     user-select: none;
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
   svg#dial.dragging { cursor: grabbing; }
+  /* the circular clip would cut off a normal outline, so keyboard focus shows
+     as an amber ring drawn inside the bezel */
+  svg#dial:focus-visible { outline: none; }
+  svg#dial:focus-visible #focusRing { opacity: .95; }
   svg#dial.inactive { opacity: .38; cursor: default; filter: saturate(.6); }
   #needle {
     transform-box: view-box;
@@ -750,6 +759,7 @@
         <circle cx="210" cy="210" r="23" fill="url(#hubGrad)" stroke="#04060a" stroke-width="1.5"/>
         <circle cx="210" cy="210" r="12.5" fill="#0a0d12" stroke="#ff9a3c" stroke-width="1.2" stroke-opacity="0.55"/>
         <circle cx="210" cy="210" r="3.4" fill="#ff9a3c" opacity="0.85"/>
+        <circle id="focusRing" cx="210" cy="210" r="199" fill="none" stroke="#ffab55" stroke-width="3" opacity="0" pointer-events="none"/>
       </svg>
     </div>
 
@@ -1800,12 +1810,22 @@ const BlendCore = (() => {
   }
 
   /* ---------- dial interaction ---------- */
-  function valueFromPointer(ev) {
+  const DIAL_R = 206; // interactive radius in viewBox units (bezel r204 + stroke + 1 slop)
+  function insideDial(ev) {
     const rect = $("dial").getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    let a = Math.atan2(ev.clientX - cx, -(ev.clientY - cy)) * 180 / Math.PI; // 0 = up, clockwise
+    const k = 420 / rect.width;
+    const dx = (ev.clientX - (rect.left + rect.width / 2)) * k;
+    const dy = (ev.clientY - (rect.top + rect.height / 2)) * k;
+    return dx * dx + dy * dy <= DIAL_R * DIAL_R;
+  }
+  function pointerAngle(ev) {
+    const rect = $("dial").getBoundingClientRect();
+    let a = Math.atan2(ev.clientX - (rect.left + rect.width / 2), -(ev.clientY - (rect.top + rect.height / 2))) * 180 / Math.PI; // 0 = up, clockwise
     if (a < 0) a += 360;
+    return a;
+  }
+  function valueFromPointer(ev) {
+    let a = pointerAngle(ev);
     if (a > 135 && a < 225) return a < 180 ? 20 : 0; // bottom dead zone → nearest end
     if (a <= 135) a += 360;
     const v = (a - START_DEG) / SWEEP_DEG * 20;
@@ -1817,6 +1837,9 @@ const BlendCore = (() => {
     let dragging = false;
 
     dial.addEventListener("pointerdown", (ev) => {
+      if (!insideDial(ev)) return; // outside the circular face → let the page scroll
+      const a0 = pointerAngle(ev);
+      if (a0 > 135 && a0 < 225) return; // unmarked bottom gap: a stray touch must not slam the level to an end
       dragging = true;
       dial.classList.add("dragging");
       try { dial.setPointerCapture(ev.pointerId); } catch (e) { /* capture unsupported for this pointer */ }
