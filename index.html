@@ -412,9 +412,6 @@
   .cost-details summary::after { content: "+"; font-family: var(--font-mono); color: var(--amber-hi); font-size: 1rem; line-height: 1; }
   .cost-details[open] summary::after { content: "–"; }
   .cost-details summary:hover { color: var(--ink); }
-  .fm-hint { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    font-family: var(--font-mono); font-size: .66rem; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-faint); }
-  @media (max-width: 350px) { .fm-hint { display: none; } }
   .cost-body { padding: 2px 13px 13px; display: grid; gap: 12px; }
   .cost-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .cost-note { font-size: .72rem; color: var(--ink-faint); line-height: 1.4; margin: 0; }
@@ -737,7 +734,6 @@
 
         <!-- dial captions -->
         <text class="dial-caption" x="210" y="122" text-anchor="middle" font-size="11">FUEL LEVEL</text>
-        <text class="dial-sub" x="210" y="137" text-anchor="middle" font-size="8">20 DIVISIONS · 0.5 STEP</text>
 
         <!-- fuel pump icon + FUEL -->
         <g id="pumpIcon" transform="translate(186,242)" fill="none" stroke="#cfd5dc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -748,12 +744,18 @@
         </g>
         <text class="dial-caption" x="216" y="256" text-anchor="middle" font-size="10">FUEL</text>
 
-        <!-- LCD odometer-style readout -->
-        <rect x="124" y="266" width="172" height="48" rx="7" fill="#04060a" stroke="#1d2530"/>
-        <text id="lcdMain" class="lcd-main" x="210" y="288" text-anchor="middle" font-size="16" font-weight="700">—</text>
-        <text id="lcdSub" class="lcd-sub" x="210" y="305" text-anchor="middle" font-size="9.5">—</text>
+        <!-- LCD odometer-style readout — centered between the FUEL LEVEL caption
+             (bbox bottom 124.5) and the hub circle's top edge (210 − 23 − 0.75 stroke
+             = 186.25): midpoint 155.375, box h48 → y 131.375. Line offsets (+22/+39)
+             preserved from the original box. -->
+        <rect x="124" y="131.375" width="172" height="48" rx="7" fill="#04060a" stroke="#1d2530"/>
+        <text id="lcdMain" class="lcd-main" x="210" y="153.375" text-anchor="middle" font-size="16" font-weight="700">—</text>
+        <text id="lcdSub" class="lcd-sub" x="210" y="170.375" text-anchor="middle" font-size="9.5">—</text>
 
         <text class="dial-sub" x="210" y="347" text-anchor="middle" font-size="7.5" opacity="0.8">E92 · 335is CLUSTER REFERENCE</text>
+        <!-- divisions caption: same 15-unit baseline rhythm below the E92 reference
+             as it originally had below FUEL LEVEL (122 → 137); 347 + 15 = 362 -->
+        <text class="dial-sub" x="210" y="362" text-anchor="middle" font-size="8">20 DIVISIONS · 0.5 STEP</text>
 
         <!-- needle -->
         <g id="needle" filter="url(#needleGlow)">
@@ -820,7 +822,7 @@
       <p class="hint">Any petrol tank capacity. <b>16.1 gal (61 L)</b> is the E92 example — edit for your car. No hidden vehicle default.</p>
 
       <details id="fuelModelDetails" class="cost-details">
-        <summary><span>Fuel model · advanced</span><span id="fuelModelHint" class="fm-hint">E10/93 → E85/110 · RON +5.3</span></summary>
+        <summary>Fuel model · advanced</summary>
         <div class="cost-body">
           <div class="field-grid">
             <div>
@@ -1589,9 +1591,6 @@ const BlendCore = (() => {
     $("priceHighUnit").textContent = u;
     $("baseFuelName").textContent = "E" + trimNum(readNum("baseE"), 1);
     $("highFuelName").textContent = "E" + trimNum(readNum("highE"), 1);
-    $("fuelModelHint").textContent = "E" + trimNum(readNum("baseE"), 1) + "/" + trimNum(readNum("baseAki"), 1)
-      + " → E" + trimNum(readNum("highE"), 1) + "/" + trimNum(readNum("highAki"), 1)
-      + " · RON +" + trimNum(readNum("ronOffset"), 1);
 
     /* fill-to readout + gauge target marker */
     syncFillToUI();
