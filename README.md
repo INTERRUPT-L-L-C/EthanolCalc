@@ -10,13 +10,13 @@ A scientific fuel-blend instrument with a BMW E92 335is-style analog cluster dia
 - Optional **fill cost**: enter base and high-fuel prices (any currency) to see what the fill costs — you pay only for what you add.
 - Estimates AKI and RON from configurable fuel anchors (linear model — estimates, not lab measurements).
 - Works with **any petrol tank capacity**, in US gallons or liters (1 US gal = 3.785411784 L, exact).
-- Target-ethanol table with CSV export.
+- Advanced **ethanol target table** with CSV export (collapsed by default, alongside the fuel-model and fill-cost panels).
 
 ## The gauge
 
 The dial emulates the E92 instrument cluster: chrome bezel, black face, white needle, amber illumination.
 
-- **20 divisions** — labels 0–20; the section lines (major marks) are **0, 5, 10, 15, 20**.
+- **20 divisions** — the five major marks read **E, ¼, ½, ¾, F**; minor ticks are unlabeled.
 - Adjustable in **0.5 steps** (41 marks total). Each division = 1/20 of the tank = 5%.
 - Inner amber scale shows tank percent (0/25/50/75/100), mirroring the dual-scale BMW layout.
 - Drag the dial, use the slider, tap ±0.5, use the E/¼/½/¾/F presets, or use arrow keys (Home/End, PageUp/PageDown).
