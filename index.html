@@ -590,24 +590,7 @@
   td { font-family: var(--font-mono); color: #d6dbe2; }
   td:first-child { color: var(--amber-hi); font-weight: 700; }
 
-  /* ---------- algorithm / calibration ---------- */
-  pre.algo {
-    margin: 0;
-    padding: 14px;
-    background: var(--lcd-bg);
-    border: 1px solid var(--lcd-edge);
-    border-radius: 10px;
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    line-height: 1.6;
-    color: #aeb7c2;
-    overflow-x: auto;
-  }
-  .cal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; margin-top: 10px; }
-  .cal-item { font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-dim); padding: 5px 8px; border-radius: 6px; background: #0b0f14; border: 1px solid #1a212b; }
-  .cal-item.pass::before { content: "✓ "; color: var(--green); }
-  .cal-item.fail { color: #ff8d85; border-color: #6e211b; }
-  .cal-item.fail::before { content: "✗ "; color: var(--red); }
+
 
   footer.site {
     position: relative;
@@ -912,55 +895,34 @@
     </section>
   </div>
 
-  <!-- ==================== TABLE ==================== -->
-  <section class="panel full-span" aria-label="Target ethanol table">
-    <h2>TARGET ETHANOL TABLE</h2>
-    <div class="table-controls">
-      <div>
-        <label for="startE">Start target E%</label>
-        <input id="startE" type="number" inputmode="decimal" step="0.5" value="20" />
+  <!-- ==================== TARGET TABLE (advanced, collapsed by default) ==================== -->
+  <details id="tableDetails" class="cost-details full-span">
+    <summary>Ethanol target table · advanced</summary>
+    <div class="cost-body">
+      <div class="table-controls">
+        <div>
+          <label for="startE">Start target E%</label>
+          <input id="startE" type="number" inputmode="decimal" step="0.5" value="20" />
+        </div>
+        <div>
+          <label for="endE">End target E%</label>
+          <input id="endE" type="number" inputmode="decimal" step="0.5" value="40" />
+        </div>
+        <div class="wide-mobile">
+          <label for="stepE">Step %</label>
+          <input id="stepE" type="number" inputmode="decimal" step="0.5" min="0.5" value="1" />
+        </div>
       </div>
-      <div>
-        <label for="endE">End target E%</label>
-        <input id="endE" type="number" inputmode="decimal" step="0.5" value="40" />
+      <div class="btn-row">
+        <button type="button" id="calcTable" class="btn primary">CALCULATE TABLE</button>
+        <button type="button" id="exportCsv" class="btn" disabled>EXPORT CSV</button>
       </div>
-      <div class="wide-mobile">
-        <label for="stepE">Step %</label>
-        <input id="stepE" type="number" inputmode="decimal" step="0.5" min="0.5" value="1" />
-      </div>
+      <div id="tableError" role="alert"></div>
+      <div id="tableWrap" class="table-scroll" hidden></div>
+      <p class="hint">Octane figures are estimates from the configured fuel anchors — verify critical blends with a fuel sample or ethanol sensor before running them.</p>
     </div>
-    <div class="btn-row">
-      <button type="button" id="calcTable" class="btn primary">CALCULATE TABLE</button>
-      <button type="button" id="exportCsv" class="btn" disabled>EXPORT CSV</button>
-    </div>
-    <div id="tableError" role="alert"></div>
-    <div id="tableWrap" class="table-scroll" hidden></div>
-  </section>
+  </details>
 
-  <!-- ==================== ALGORITHM + CALIBRATION ==================== -->
-  <section class="panel full-span" aria-label="Algorithm and calibration">
-    <h2>ALGORITHM · CALIBRATION</h2>
-    <pre class="algo"><code>top-up fill (fuel already in tank):
-  currentFuel      = tankSize × (gaugeValue / 20)
-  available        = tankSize − currentFuel
-  currentEthanol   = currentFuel × currentE
-  highToAdd        = (tankSize × targetE − currentEthanol − available × baseE) / (highE − baseE)
-  baseToAdd        = available − highToAdd
-  finalE           = (currentEthanol + highToAdd × highE + baseToAdd × baseE) / tankSize
-
-full-tank blend:
-  highGallons      = tankSize × (targetE − currentE) / (highE − baseE)
-  baseGallons      = tankSize − highGallons
-
-octane:
-  AKI              = volume-weighted mean of fuel AKI values
-  RON (estimate)   = AKI + offset        (linear model, not a lab measurement)
-
-units: 1 US gal = 3.785411784 L (exact) · validity tolerance 1e-7 · gauge 0–20, step 0.5</code></pre>
-    <h3 id="calHeading">SELF-TEST</h3>
-    <div id="calGrid" class="cal-grid"></div>
-    <p class="hint">Linear volume-blend model for petrol/gasoline. Octane figures are estimates from the configured fuel anchors — verify critical blends with a fuel sample or ethanol sensor before running them. This instrument runs its golden-example calibration on every load.</p>
-  </section>
 </main>
 
 <footer class="site">
@@ -1996,7 +1958,7 @@ const BlendCore = (() => {
     });
   }
 
-  /* ---------- calibration ---------- */
+  /* ---------- self-test (safety gate; dev check-grid removed for production) ---------- */
   function runCalibration() {
     const report = CORE.selfTest();
     calOk = report.ok;
@@ -2004,10 +1966,6 @@ const BlendCore = (() => {
     lamp.classList.remove("ok-on", "err-on");
     lamp.classList.add(report.ok ? "ok-on" : "err-on");
     lamp.textContent = "SELF-TEST " + report.passed + "/" + report.total;
-    $("calHeading").textContent = "SELF-TEST · " + report.passed + "/" + report.total + (report.ok ? " PASS" : " FAIL");
-    $("calGrid").innerHTML = report.checks.map((c) =>
-      '<div class="cal-item ' + (c.pass ? "pass" : "fail") + '" title="' + (c.detail || "") + '">' + c.name + "</div>"
-    ).join("");
     $("calFaultBanner").hidden = report.ok;
     setLamp("warnCal", !report.ok);
   }
